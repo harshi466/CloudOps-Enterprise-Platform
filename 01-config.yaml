@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: app-config, namespace: expense-app }
+data:
+  KINESIS_STREAM: "cloudops-dev-expenses"
+  RECEIPT_BUCKET: "REPLACE_WITH_terraform_output_receipts_bucket"
+  PREDICT_API_URL: "REPLACE_WITH_terraform_output_predict_url"
+  AWS_REGION: "ap-south-1"

@@ -1,0 +1,25 @@
+# For minikube/kind only (on AWS use RDS). Not part of kustomization.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: postgres, namespace: expense-app }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - { name: POSTGRES_DB, value: expenses }
+            - { name: POSTGRES_USER, value: app }
+            - { name: POSTGRES_PASSWORD, value: localpass }
+          ports: [{ containerPort: 5432 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: expense-app }
+spec:
+  selector: { app: postgres }
+  ports: [{ port: 5432 }]

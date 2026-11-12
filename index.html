@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudOps Expense Tracker</title>
+<style>
+  :root{--bg:#f5f7fb;--card:#fff;--text:#1d2433;--muted:#667085;--brand:#2563eb;--border:#e4e7ec}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#1a2130;--text:#eef1f6;--muted:#98a2b3;--border:#2b3548}}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:var(--brand);color:#fff;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+  main{max-width:900px;margin:24px auto;padding:0 16px;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+  input,select,button{padding:10px;border-radius:8px;border:1px solid var(--border);font:inherit;background:var(--card);color:var(--text)}
+  button{background:var(--brand);color:#fff;border:0;cursor:pointer}button.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+  .row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+  table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px;border-bottom:1px solid var(--border)}
+  .kpi{display:flex;gap:16px;flex-wrap:wrap}.kpi div{flex:1;min-width:140px}.kpi b{font-size:1.5rem;display:block}
+  .muted{color:var(--muted);font-size:.9rem}.hidden{display:none}#msg{color:#d92d20}
+</style>
+</head>
+<body>
+<header><strong>💸 CloudOps Expense Tracker</strong><span id="who"></span></header>
+<main>
+  <section id="auth" class="card">
+    <h3>Login / Register</h3>
+    <div class="row"><input id="name" placeholder="Name (register only)"><input id="email" placeholder="Email"><input id="password" type="password" placeholder="Password (min 8)"></div>
+    <p class="row"><button onclick="login()">Login</button><button class="ghost" onclick="register()">Register</button></p>
+    <p id="msg"></p>
+  </section>
+  <section id="app" class="hidden">
+    <div class="card kpi"><div><span class="muted">Total spent</span><b id="total">0</b></div>
+      <div><span class="muted">Next-month forecast</span><b id="forecast">–</b><span class="muted" id="fsrc"></span></div>
+      <div><button class="ghost" onclick="logout()">Logout</button></div></div>
+    <div class="card"><h3>Add expense</h3>
+      <div class="row"><input id="title" placeholder="Title"><input id="amount" type="number" min="1" placeholder="Amount">
+        <select id="category"><option>food</option><option>travel</option><option>rent</option><option>shopping</option><option>bills</option><option>health</option><option>other</option></select>
+        <input id="spent_on" type="date"><button onclick="addExpense()">Add</button></div></div>
+    <div class="card"><h3>Expenses</h3><table><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const tok=()=>localStorage.getItem("token");
+async function api(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{"Content-Type":"application/json",...(tok()?{Authorization:"Bearer "+tok()}:{})}});
+  const d=r.status===204?{}:await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||r.statusText); return d;
+}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function register(){try{await api("/api/users/register",{method:"POST",body:JSON.stringify({name:$("name").value,email:$("email").value,password:$("password").value})});await login()}catch(e){$("msg").textContent=e.message}}
+async function login(){try{const d=await api("/api/users/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});localStorage.setItem("token",d.token);localStorage.setItem("name",d.name);init()}catch(e){$("msg").textContent=e.message}}
+function logout(){localStorage.clear();init()}
+async function addExpense(){try{await api("/api/expenses",{method:"POST",body:JSON.stringify({title:$("title").value,amount:$("amount").value,category:$("category").value,spent_on:$("spent_on").value||undefined})});$("title").value=$("amount").value="";load()}catch(e){alert(e.message)}}
+async function del(id){await api("/api/expenses/"+id,{method:"DELETE"});load()}
+async function load(){
+  try{const list=await api("/api/expenses");
+    $("rows").innerHTML=list.map(e=>`<tr><td>${esc(e.spent_on)}</td><td>${esc(e.title)}</td><td>${esc(e.category)}</td><td>₹${e.amount}</td><td><button class="ghost" onclick="del(${e.id})">✕</button></td></tr>`).join("");
+    $("total").textContent="₹"+list.reduce((a,e)=>a+e.amount,0).toFixed(0);
+    const p=await api("/api/expenses/predict");$("forecast").textContent="₹"+p.next_month_forecast;$("fsrc").textContent=" ("+p.source+")";
+  }catch(e){logout()}
+}
+function init(){const on=!!tok();$("auth").classList.toggle("hidden",on);$("app").classList.toggle("hidden",!on);$("who").textContent=on?"Hi, "+localStorage.getItem("name"):"";if(on)load()}
+init();
+</script>
+</body></html>

@@ -1,0 +1,16 @@
+# Default deny, then allow only what the app needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny-ingress, namespace: expense-app }
+spec: { podSelector: {}, policyTypes: [Ingress] }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-from-namespace-and-ingress, namespace: expense-app }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }

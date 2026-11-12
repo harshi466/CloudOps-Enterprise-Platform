@@ -1,0 +1,9 @@
+server {
+  listen 8080;
+  resolver ${DNS_RESOLVER} valid=10s;
+  root /usr/share/nginx/html;
+  location = /health { return 200 'ok'; add_header Content-Type text/plain; }
+  location /api/users    { set $u http://user-service:5001;    proxy_pass $u; }
+  location /api/expenses { set $e http://expense-service:5002; proxy_pass $e; }
+  location / { try_files $uri /index.html; }
+}

@@ -1,0 +1,6 @@
+alert_email        = "you@example.com"
+aws_region         = "ap-south-1"
+monthly_budget_usd = 20
+enable_nat         = false   # set true together with enable_eks
+enable_eks         = false   # costs money; prefer minikube while learning
+github_repo        = ""      # e.g. "your-username/cloudops-expense-platform" to enable CI via OIDC

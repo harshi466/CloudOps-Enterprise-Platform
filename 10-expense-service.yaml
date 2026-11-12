@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: expense-service, namespace: expense-app, labels: { app: expense-service } }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: expense-service } }
+  strategy: { type: RollingUpdate, rollingUpdate: { maxUnavailable: 0, maxSurge: 1 } }
+  template:
+    metadata: { labels: { app: expense-service } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001 }
+      containers:
+        - name: expense-service
+          image: ECR_REGISTRY/expense-service:latest   # replaced by CI/CD
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5002 }]
+          envFrom:
+            - configMapRef: { name: app-config }
+            - secretRef: { name: app-secrets }
+          readinessProbe: { httpGet: { path: /health, port: 5002 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          livenessProbe: { httpGet: { path: /health, port: 5002 }, initialDelaySeconds: 15, periodSeconds: 20 }
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { cpu: 500m, memory: 256Mi } }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: expense-service, namespace: expense-app }
+spec:
+  selector: { app: expense-service }
+  ports: [{ port: 5002, targetPort: 5002 }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: expense-service, namespace: expense-app }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: expense-service }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }

@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Expense Tracker API
+  version: 1.0.0
+  description: Import this file in OutSystems (Integrations > REST) or Mendix (Consumed REST Service).
+servers:
+  - url: http://REPLACE_WITH_INGRESS_HOSTNAME
+paths:
+  /api/users/login:
+    post:
+      summary: Login and get JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { email: { type: string }, password: { type: string } } }
+      responses: { "200": { description: token } }
+  /api/expenses:
+    get:
+      summary: List expenses
+      security: [{ bearerAuth: [] }]
+      responses: { "200": { description: list } }
+    post:
+      summary: Add expense
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { title: { type: string }, amount: { type: number }, category: { type: string }, spent_on: { type: string, format: date } } }
+      responses: { "201": { description: created } }
+  /api/expenses/summary:
+    get: { summary: Totals by category and month, security: [{ bearerAuth: [] }], responses: { "200": { description: summary } } }
+  /predict:
+    post:
+      summary: Serverless ML forecast (API Gateway URL)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { monthly_totals: { type: array, items: { type: number } } } }
+      responses: { "200": { description: forecast } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
